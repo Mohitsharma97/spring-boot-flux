@@ -11,7 +11,7 @@ jobs:
   build:
     name: Build and analyze
     runs-on: ubuntu-latest
-    
+   
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,8 +44,7 @@ jobs:
         run: |
           mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
             -Dsonar.projectKey=Mohitsharma97_spring-boot-flux_16b31644-4ad1-4177-be0a-5db672c469c1 \
-            -Dsonar.projectName='spring-boot-flux' \
-            -Dsonar.branch.name=${{ github.head_ref }}  # Set branch name for analysis
+            -Dsonar.projectName='spring-boot-flux'
 
       - name: Decorate PR with Build Status
         if: github.event_name == 'pull_request'
