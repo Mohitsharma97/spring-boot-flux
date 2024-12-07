@@ -30,6 +30,7 @@
 		<java.version>17</java.version>
 		<org.mapstruct.version>1.5.5.Final</org.mapstruct.version>
 	</properties>
+	
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -74,7 +75,13 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
-
+  <distributionManagement>
+    <snapshotRepository>
+      <id>snapshots</id>
+      <name>a0jmjc78d70yw-artifactory-primary-0-snapshots</name>
+      <url>https://trial35x8wp.jfrog.io/artifactory/libs-snaphot-libs-snapshot</url>
+    </snapshotRepository>
+  </distributionManagement>
 	<build>
 		<plugins>
 			<plugin>
