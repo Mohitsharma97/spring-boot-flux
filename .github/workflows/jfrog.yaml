@@ -26,7 +26,7 @@ jobs:
     # Step 3: Configure JFrog CLI (Authenticate with API key)
     - name: JFrog CLI Configuration
       run: |
-        jf config add --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USERNAME }} --apikey ${{ secrets.JFROG_API_KEY }}
+        jf config add --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USER }} --apikey ${{ secrets.JFROG_API_KEY }}
 
     # Step 4: Verify JFrog CLI configuration
     - name: Verify JFrog CLI Configuration
