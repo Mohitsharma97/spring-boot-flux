@@ -35,23 +35,19 @@ jobs:
             --output=json > scan_results.json || true
 
       # Parse and post scan results to the PR
-      - name: Post Scan Results to PR
-        if: always()
+      - name: Create PR comment with security results
         run: |
-          if [[ -s scan_results.json ]]; then
-            scan_summary=$(jq '.summary' scan_results.json)
-            scan_issues=$(jq -r '.issues[] | "- **Severity**: \(.severity)\n  **Component**: \(.component_id)\n  **Vulnerability**: \(.vulnerability_id)"' scan_results.json)
-            if [[ -z "$scan_issues" ]]; then
-              scan_issues="No vulnerabilities found 🎉"
-            fi
+          scan_results=$(jfrog rt scan --output=json --licenses --fail-on-severity=critical --debug)
+          if [[ $? -ne 0 ]]; then
+            echo "JFrog Xray scan failed. Check the logs for more details."
+            pr_url="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
+            curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -d "{\"body\": \"### JFrog Xray Security Scan Results\n\n**Summary:**\nError generating scan results. Please check the logs.\n\n**Details:**\n\`\`\`json\n$scan_results\n\`\`\`\"}" \
+              $pr_url
           else
-            scan_summary="Error generating scan results. Please check the logs."
-            scan_issues="Scan did not generate results."
+            pr_url="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
+            curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -d "{\"body\": \"### JFrog Xray Security Scan Results\n\n$scan_results\"}" \
+              $pr_url
           fi
 
-          pr_url="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
-
-          curl -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n --arg summary "$scan_summary" --arg issues "$scan_issues" '{"body": "### JFrog Xray Security Scan Results\n\n**Summary:**\n```json\n\($summary)\n```\n**Details:**\n\($issues)"}')" \
-            $pr_url
