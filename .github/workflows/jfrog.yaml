@@ -50,6 +50,13 @@ jobs:
         JAR_FILE=$(find target -name "*.jar" | head -n 1)  # Adjust the path if your JAR file is elsewhere
         echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV  # Set the JAR file path as an environment variable
 
+    - name: Configure Artifactory Server
+      run: |
+        jf config add my-artifactory \
+          --url https://trial35x8wp.jfrog.io/artifactory \
+          --user ${{ secrets.ARTIFACTORY_USER }} \
+          --password ${{ secrets.ARTIFACTORY_PASSWORD }}
+          
     - name: Configure JFrog CLI
       run: |
         jf mvn-config --server-id-resolve=my-artifactory --server-id-deploy=my-artifactory \
