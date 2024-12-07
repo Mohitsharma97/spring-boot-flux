@@ -49,11 +49,15 @@ jobs:
       run: |
         JAR_FILE=$(find target -name "*.jar" | head -n 1)  # Adjust the path if your JAR file is elsewhere
         echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV  # Set the JAR file path as an environment variable
-        
+
+    - name: Configure JFrog CLI
+      run: |
+        jfrog config add my-artifactory --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USER }} --apikey ${{ secrets.JFROG_API_KEY }}
+   
     - name: Scan Maven build artifacts with JFrog Xray
       run: |
-        jf rt mvn "clean install" --build-name=github-actions-build --build-number=${{ github.run_number }}
-        jf rt scan --build=github-actions-build/${{ github.run_number }} --fail build --watch --output json
+        jf mvn clean install --build-name=github-actions-build --build-number=${{ github.run_number }}
+        jf scan --build=github-actions-build/${{ github.run_number }} --fail build --watch --output json
         
     # Step 5: Run JFrog Xray Scan
     - name: Run JFrog Xray Scan
