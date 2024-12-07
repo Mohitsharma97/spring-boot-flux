@@ -28,9 +28,9 @@ jobs:
       - name: Install JFrog CLI
         run: |
           curl -fL https://getcli.jfrog.io | bash
-          export PATH=$HOME/.jfrog/bin:$PATH
+          echo "$HOME/.jfrog/bin" >> $GITHUB_PATH  # Ensure it's added to the PATH for subsequent steps
 
-      # Set up JFrog CLI
+      # Set up JFrog CLI with authentication
       - name: Set up JFrog CLI with authentication
         run: |
           jfrog rt config --url https://trial35x8wp.jfrog.io/artifactory \
