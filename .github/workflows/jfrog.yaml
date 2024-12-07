@@ -52,8 +52,8 @@ jobs:
 
     - name: Configure JFrog CLI
       run: |
-        jfrog config add my-artifactory --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USER }} --access-token ${{ secrets.JFROG_API_KEY }}
-   
+        jf mvn-config --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USER }} --password ${{ secrets.JFROG_API_KEY }}   
+    
     - name: Scan Maven build artifacts with JFrog Xray
       run: |
         jf mvn clean install --build-name=github-actions-build --build-number=${{ github.run_number }}
