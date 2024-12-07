@@ -50,7 +50,7 @@ jobs:
         JAR_FILE=$(find target -name "*.jar" | head -n 1)  # Adjust the path if your JAR file is elsewhere
         echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV  # Set the JAR file path as an environment variable
         
-      - name: Scan Maven build artifacts with JFrog Xray
+    - name: Scan Maven build artifacts with JFrog Xray
       run: |
         jf rt mvn "clean install" --build-name=github-actions-build --build-number=${{ github.run_number }}
         jf rt scan --build=github-actions-build/${{ github.run_number }} --fail build --watch --output json
