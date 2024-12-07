@@ -26,8 +26,8 @@ jobs:
       # Authenticate with JFrog (using environment variables for security)
       - name: Authenticate with JFrog
         run: |
-          jf rt config --url https://your-company.jfrog.io/artifactory --user ${{ secrets.JFROG_USER }} --apikey ${{ secrets.JFROG_API_KEY }}
-      
+          jf config add --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USER }} --apikey ${{ secrets.JFROG_API_KEY }}
+
       # Verify JFrog CLI version
       - name: Verify JFrog CLI version
         run: jf --version
