@@ -35,12 +35,12 @@ jobs:
       # Run Xray scan
       - name: Run Xray security scan
         run: |
-          jf xr scan --fail-on-severity=critical --output=json --licenses --debug
+          jf xr scan --fail-on-severity=critical --output=json --licenses
 
       # Post scan results to PR
       - name: Create PR comment with scan results
         run: |
-          scan_results=$(jf xr scan --output=json --licenses --fail-on-severity=critical --debug)
+          scan_results=$(jf xr scan --output=json --licenses --fail-on-severity=critical)
           pr_url="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
           curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -d "{\"body\": \"### JFrog Xray Security Scan Results\n\n$scan_results\"}" \
