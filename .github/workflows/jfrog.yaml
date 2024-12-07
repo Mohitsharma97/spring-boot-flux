@@ -51,7 +51,7 @@ jobs:
 
           pr_url="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
 
-          curl -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          curl -X POST -H "Authorization: Bearer ${{ secrets.GITHUB1_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "$(jq -n --arg summary "$scan_summary" --arg issues "$scan_issues" '{"body": "### JFrog Xray Security Scan Results\n\n**Summary:**\n```json\n\($summary)\n```\n**Details:**\n\($issues)"}')" \
             $pr_url
