@@ -13,41 +13,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Check out the repository code
+      # Checkout repository code
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
       # Set up JFrog CLI
       - name: Set up JFrog CLI
-        run: |
-          curl -fL https://getcli.jfrog.io | sh
-          ./jfrog rt config \
-            --url https://trial35x8wp.jfrog.io/artifactory \
-            --user "${{ secrets.JFROG_USER }}" \
-            --apikey "${{ secrets.JFROG_API_KEY }}"
+        uses: jfrog/setup-jfrog-cli@v4
+        with:
+          version: 'latest'
 
-      # Perform JFrog Xray Security Scan
-      - name: Perform Security Scan
-        id: xray-scan
+      # Authenticate with JFrog (using environment variables for security)
+      - name: Authenticate with JFrog
         run: |
-          ./jfrog rt scan \
-            --licenses --fail-on-severity=critical \
-            --output=json > scan_results.json || true
+          jf rt config --url https://your-company.jfrog.io/artifactory --user ${{ secrets.JFROG_USER }} --apikey ${{ secrets.JFROG_API_KEY }}
+      
+      # Verify JFrog CLI version
+      - name: Verify JFrog CLI version
+        run: jf --version
 
-      # Parse and post scan results to the PR
-      - name: Create PR comment with security results
+      # Scan the project with JFrog Xray
+      - name: Scan project with JFrog Xray
         run: |
-          scan_results=$(jfrog rt scan --output=json --licenses --fail-on-severity=critical --debug)
-          if [[ $? -ne 0 ]]; then
-            echo "JFrog Xray scan failed. Check the logs for more details."
-            pr_url="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
-            curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -d "{\"body\": \"### JFrog Xray Security Scan Results\n\n**Summary:**\nError generating scan results. Please check the logs.\n\n**Details:**\n\`\`\`json\n$scan_results\n\`\`\`\"}" \
-              $pr_url
-          else
-            pr_url="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
-            curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              -d "{\"body\": \"### JFrog Xray Security Scan Results\n\n$scan_results\"}" \
-              $pr_url
-          fi
+          jf rt scan --output=json --licenses --fail-on-severity=critical --debug
 
+      # Post the scan results to the PR
+      - name: Create PR comment with scan results
+        run: |
+          scan_results=$(jf rt scan --output=json --licenses --fail-on-severity=critical --debug)
+          pr_url="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
+          curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -d "{\"body\": \"### JFrog Xray Security Scan Results\n\n$scan_results\"}" \
+            $pr_url
