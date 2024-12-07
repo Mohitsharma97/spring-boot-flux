@@ -1,0 +1,57 @@
+name: JFrog Xray Security Scan
+
+on:
+  pull_request:
+    paths:
+      - '**/*.pom'
+      - '**/*.jar'
+      - '**/*.yml'
+      - '**/*.json'
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Set up JFrog CLI
+      - name: Set up JFrog CLI
+        run: |
+          curl -fL https://getcli.jfrog.io | sh
+          ./jfrog rt config \
+            --url https://your-company.jfrog.io/artifactory \
+            --user "${{ secrets.JFROG_USER }}" \
+            --apikey "${{ secrets.JFROG_API_KEY }}"
+
+      # Perform JFrog Xray Security Scan
+      - name: Perform Security Scan
+        id: xray-scan
+        run: |
+          ./jfrog rt scan \
+            --licenses --fail-on-severity=critical \
+            --output=json > scan_results.json || true
+
+      # Parse and post scan results to the PR
+      - name: Post Scan Results to PR
+        if: always()
+        run: |
+          if [[ -s scan_results.json ]]; then
+            scan_summary=$(jq '.summary' scan_results.json)
+            scan_issues=$(jq -r '.issues[] | "- **Severity**: \(.severity)\n  **Component**: \(.component_id)\n  **Vulnerability**: \(.vulnerability_id)"' scan_results.json)
+            if [[ -z "$scan_issues" ]]; then
+              scan_issues="No vulnerabilities found 🎉"
+            fi
+          else
+            scan_summary="Error generating scan results. Please check the logs."
+            scan_issues="Scan did not generate results."
+          fi
+
+          pr_url="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
+
+          curl -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg summary "$scan_summary" --arg issues "$scan_issues" '{"body": "### JFrog Xray Security Scan Results\n\n**Summary:**\n```json\n\($summary)\n```\n**Details:**\n\($issues)"}')" \
+            $pr_url
