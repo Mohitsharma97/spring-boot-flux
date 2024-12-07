@@ -28,11 +28,11 @@ jobs:
       run: |
         jf config add --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USER}} --access-token ${{ secrets.JFROG_API_KEY }}
 
-    # Step 4: Verify JFrog CLI configuration
-    - name: Verify JFrog CLI Configuration
-      run: |
-        jf config show
-        jf rt ping
+    # # Step 4: Verify JFrog CLI configuration
+    # - name: Verify JFrog CLI Configuration
+    #   run: |
+    #     jf config show
+    #     jf rt ping
 
     # Step 5: Run JFrog Xray Scan
     - name: Run JFrog Xray Scan
