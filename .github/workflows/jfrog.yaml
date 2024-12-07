@@ -23,7 +23,7 @@ jobs:
         with:
           version: 'latest'
 
-      # Authenticate with JFrog (using environment variables for security)
+      # Authenticate with JFrog
       - name: Authenticate with JFrog
         run: |
           jf config add --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USER }} --apikey ${{ secrets.JFROG_API_KEY }}
@@ -32,15 +32,15 @@ jobs:
       - name: Verify JFrog CLI version
         run: jf --version
 
-      # Scan the project with JFrog Xray
-      - name: Scan project with JFrog Xray
+      # Run Xray scan
+      - name: Run Xray security scan
         run: |
-          jf rt scan --output=json --licenses --fail-on-severity=critical --debug
+          jf xray scan --fail-on-severity=critical --output=json --licenses --debug
 
-      # Post the scan results to the PR
+      # Post scan results to PR
       - name: Create PR comment with scan results
         run: |
-          scan_results=$(jf rt scan --output=json --licenses --fail-on-severity=critical --debug)
+          scan_results=$(jf xray scan --output=json --licenses --fail-on-severity=critical --debug)
           pr_url="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
           curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -d "{\"body\": \"### JFrog Xray Security Scan Results\n\n$scan_results\"}" \
