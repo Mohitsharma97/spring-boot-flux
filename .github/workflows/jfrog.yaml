@@ -24,15 +24,20 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Set up JFrog CLI
-      - name: Set up JFrog CLI
+      # Install JFrog CLI
+      - name: Install JFrog CLI
         run: |
-          curl -fL https://getcli.jfrog.io | sh
+          curl -fL https://getcli.jfrog.io | bash
+          export PATH=$HOME/.jfrog/bin:$PATH
+
+      # Set up JFrog CLI
+      - name: Set up JFrog CLI with authentication
+        run: |
           jfrog rt config --url https://trial35x8wp.jfrog.io/artifactory \
             --user ${{ secrets.JFROG_USER }} \
             --apikey ${{ secrets.JFROG_API_KEY }}
 
-      # Build and deploy the artifact to JFrog Artifactory
+      # Build and Deploy to JFrog
       - name: Build and Deploy to JFrog
         run: |
           mvn clean install -DskipTests
