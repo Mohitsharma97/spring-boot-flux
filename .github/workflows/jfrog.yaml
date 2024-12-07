@@ -54,8 +54,8 @@ jobs:
       run: |
         jf config add my-artifactory \
           --url https://trial35x8wp.jfrog.io/artifactory \
-          --user ${{ secrets.ARTIFACTORY_USER }} \
-          --password ${{ secrets.ARTIFACTORY_PASSWORD }}
+          --user ${{ secrets.JFROG_USER }} \
+          --access-token ${{ secrets.JFROG_API_KEY }}
           
     - name: Configure JFrog CLI
       run: |
