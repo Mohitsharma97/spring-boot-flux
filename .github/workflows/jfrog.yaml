@@ -27,6 +27,9 @@ jobs:
       uses: actions/setup-java@v2
       with:
         java-version: '17'
+        java-package: jdk
+        architecture: x64
+        distribution: 'adoptopenjdk'
 
     # Step 3: Configure JFrog CLI (Authenticate with API key)
     - name: JFrog CLI Configuration
