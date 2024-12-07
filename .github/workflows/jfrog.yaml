@@ -38,7 +38,7 @@ jobs:
     - name: Run JFrog Xray Scan
       id: xray_scan
       run: |
-        jf xr scan --licenses --format=json --fail-on-severity=critical **/*.jar **/*.pom **/*.json **/*.yml > xray_scan_results.json
+        jf xr scan --licenses --format=json --min-severity=critical **/*.jar **/*.pom **/*.json **/*.yml > xray_scan_results.json
       continue-on-error: false
 
     # Step 6: Upload scan results to PR as a comment
