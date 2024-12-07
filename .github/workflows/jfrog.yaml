@@ -43,6 +43,12 @@ jobs:
     - name: Build project with Maven
       run: |
         mvn clean install -DskipTests
+
+    - name: Find the generated JAR file
+      id: find_jar
+      run: |
+        JAR_FILE=$(find target -name "*.jar" | head -n 1)  # Adjust the path if your JAR file is elsewhere
+        echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV  # Set the JAR file path as an environment variable
         
     # Step 5: Run JFrog Xray Scan
     - name: Run JFrog Xray Scan
