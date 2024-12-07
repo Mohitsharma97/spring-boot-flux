@@ -34,16 +34,29 @@ jobs:
         jf config show
         jf rt ping
 
-    # Step 5: Run Xray security scan on specific file types
+    # Step 5: Run JFrog Xray Scan
     - name: Run JFrog Xray Scan
+      id: xray_scan
       run: |
-        jf xr scan --licenses --format=json --fail-on-severity=critical **/*.jar **/*.pom **/*.json **/*.yml
+        jf xr scan --licenses --format=json --fail-on-severity=critical **/*.jar **/*.pom **/*.json **/*.yml > xray_scan_results.json
       continue-on-error: false
 
-    # Step 6: Upload scan results as an artifact (optional)
-    - name: Upload scan results
-      if: success()
-      uses: actions/upload-artifact@v3
-      with:
-        name: xray-scan-results
-        path: /home/runner/work/_temp
+    # Step 6: Upload scan results to PR as a comment
+    - name: Upload Xray scan results to PR
+      if: success() || failure()
+      run: |
+        # Get the PR number
+        PR_NUMBER=$(jq --raw-output .pull_request.number $GITHUB_EVENT_PATH)
+        
+        # Get the scan results and format them
+        SCAN_RESULTS=$(cat xray_scan_results.json)
+        
+        # Prepare the comment body with scan results
+        COMMENT_BODY="### JFrog Xray Security Scan Results\n\n**Scan Results**:\n\`\`\`json\n$SCAN_RESULTS\n\`\`\`"
+        
+        # Create the comment on the PR using GitHub API
+        curl -X POST \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d "{\"body\": \"$COMMENT_BODY\"}" \
+          "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/comments"
