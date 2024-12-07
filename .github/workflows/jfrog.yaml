@@ -1,4 +1,4 @@
-name: JFrog Xray Security Scan
+name: JFrog Deploy and Xray Security Scan
 
 on:
   pull_request:
@@ -9,49 +9,38 @@ on:
       - '**/*.json'
 
 jobs:
-  security-scan:
+  deploy-and-scan:
     runs-on: ubuntu-latest
 
     steps:
-      # Check out the repository code
+      # Step 1: Checkout the repository
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
-      # Set up JFrog CLI
+      # Step 2: Set up JFrog CLI
       - name: Set up JFrog CLI
         run: |
           curl -fL https://getcli.jfrog.io | sh
-          ./jfrog rt config \
-            --url https://trial35x8wp.jfrog.io/artifactory \
-            --user "${{ secrets.JFROG_USER }}" \
-            --apikey "${{ secrets.JFROG_API_KEY }}"
+          ./jfrog rt config --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USER }} --apikey ${{ secrets.JFROG_API_KEY }}
 
-      # Perform JFrog Xray Security Scan
-      - name: Perform Security Scan
-        id: xray-scan
+      # Step 3: Build and deploy artifacts to JFrog Artifactory
+      - name: Build and Deploy to JFrog Artifactory
         run: |
-          ./jfrog rt scan \
-            --licenses --fail-on-severity=critical \
-            --output=json > scan_results.json || true
+          mvn clean install -DskipTests
+          ./jfrog rt u "target/*.jar" libs-snapshot-local/ \
+            --build-name=my-build \
+            --build-number=${{ github.run_number }}
 
-      # Parse and post scan results to the PR
-      - name: Post Scan Results to PR
-        if: always()
+      # Step 4: Scan artifacts with JFrog Xray
+      - name: Scan Artifacts with JFrog Xray
         run: |
-          if [[ -s scan_results.json ]]; then
-            scan_summary=$(jq '.summary' scan_results.json)
-            scan_issues=$(jq -r '.issues[] | "- **Severity**: \(.severity)\n  **Component**: \(.component_id)\n  **Vulnerability**: \(.vulnerability_id)"' scan_results.json)
-            if [[ -z "$scan_issues" ]]; then
-              scan_issues="No vulnerabilities found 🎉"
-            fi
-          else
-            scan_summary="Error generating scan results. Please check the logs."
-            scan_issues="Scan did not generate results."
-          fi
+          ./jfrog rt build-scan my-build ${{ github.run_number }}
 
+      # Step 5: Post scan results as a PR comment
+      - name: Create PR comment with security results
+        run: |
+          scan_results=$(./jfrog rt build-scan my-build ${{ github.run_number }} --output=json)
           pr_url="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
-
-          curl -X POST -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n --arg summary "$scan_summary" --arg issues "$scan_issues" '{"body": "### JFrog Xray Security Scan Results\n\n**Summary:**\n```json\n\($summary)\n```\n**Details:**\n\($issues)"}')" \
+          curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -d "{\"body\": \"### JFrog Xray Security Scan Results\\n\\n**Summary:**\\n\\\`\\\`\\\`json\\n$scan_results\\n\\\`\\\`\\\`\\n\\n**Details:**\\nRefer to JFrog Xray for full report.\"}" \
             $pr_url
