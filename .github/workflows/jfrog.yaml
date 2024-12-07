@@ -52,7 +52,9 @@ jobs:
 
     - name: Configure JFrog CLI
       run: |
-        jf mvn-config --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USER }} --password ${{ secrets.JFROG_API_KEY }}   
+        jf mvn-config --server-id-resolve=my-artifactory --server-id-deploy=my-artifactory \
+        --repo-resolve-releases=libs-release --repo-resolve-snapshots=libs-snapshot \
+        --repo-deploy-releases=libs-release-local --repo-deploy-snapshots=libs-snapshot-local  
     
     - name: Scan Maven build artifacts with JFrog Xray
       run: |
