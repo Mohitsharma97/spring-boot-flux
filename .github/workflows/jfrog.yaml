@@ -52,7 +52,7 @@ jobs:
 
     - name: Configure JFrog CLI
       run: |
-        jfrog config add my-artifactory --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USER }} --apikey ${{ secrets.JFROG_API_KEY }}
+        jfrog config add my-artifactory --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USER }} --access-token ${{ secrets.JFROG_API_KEY }}
    
     - name: Scan Maven build artifacts with JFrog Xray
       run: |
