@@ -3,45 +3,47 @@ name: JFrog Xray Security Scan
 on:
   pull_request:
     paths:
-      - '**/*.pom'
       - '**/*.jar'
-      - '**/*.yml'
+      - '**/*.pom'
       - '**/*.json'
+      - '**/*.yml'
 
 jobs:
-  security-scan:
+  xray_scan:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repository code
-      - name: Checkout repository
-        uses: actions/checkout@v2
+    # Step 1: Check out the code
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      # Set up JFrog CLI
-      - name: Set up JFrog CLI
-        uses: jfrog/setup-jfrog-cli@v4
-        with:
-          version: 'latest'
+    # Step 2: Set up JFrog CLI
+    - name: Set up JFrog CLI
+      uses: jfrog/setup-jfrog-cli@v4
+      with:
+        version: '2.72.2'
 
-      # Authenticate with JFrog
-      - name: Authenticate with JFrog
-        run: |
-          jf config add --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USER }} --apikey ${{ secrets.JFROG_API_KEY }}
+    # Step 3: Configure JFrog CLI (Authenticate with API key)
+    - name: JFrog CLI Configuration
+      run: |
+        jf config add --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USERNAME }} --apikey ${{ secrets.JFROG_API_KEY }}
 
-      # Verify JFrog CLI version
-      - name: Verify JFrog CLI version
-        run: jf --version
+    # Step 4: Verify JFrog CLI configuration
+    - name: Verify JFrog CLI Configuration
+      run: |
+        jf config show
+        jf rt ping
 
-      # Run Xray scan
-      - name: Run Xray security scan
-        run: |
-          jf scan --licenses --format=json **/*.jar **/*.pom **/*.json **/*.yml
+    # Step 5: Run Xray security scan on specific file types
+    - name: Run JFrog Xray Scan
+      run: |
+        jf xr scan --licenses --format=json --fail-on-severity=critical **/*.jar **/*.pom **/*.json **/*.yml
+      continue-on-error: false
 
-      # Post scan results to PR
-      - name: Create PR comment with scan results
-        run: |
-          scan_results=$(jf scan --licenses --format=json **/*.jar **/*.pom **/*.json **/*.yml)
-          pr_url="https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
-          curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -d "{\"body\": \"### JFrog Xray Security Scan Results\n\n$scan_results\"}" \
-            $pr_url
+    # Step 6: Upload scan results as an artifact (optional)
+    - name: Upload scan results
+      if: success()
+      uses: actions/upload-artifact@v3
+      with:
+        name: xray-scan-results
+        path: /home/runner/work/_temp
