@@ -1,96 +1,89 @@
-name: JFrog Xray Security Scan
+name: Maven Build and Security Scan on PR
 
 on:
   pull_request:
-    paths:
-      - '**/*.jar'
-      - '**/*.pom'
-      - '**/*.json'
-      - '**/*.yml'
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 jobs:
-  xray_scan:
+  build-and-scan:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Check out the code
-    - name: Checkout code
+    # Step 1: Checkout the code
+    - name: Checkout Code
       uses: actions/checkout@v3
 
-    # Step 2: Set up JFrog CLI
-    - name: Set up JFrog CLI
-      uses: jfrog/setup-jfrog-cli@v4
-      with:
-        version: '2.72.2'
-        
+    # Step 2: Set up Java
     - name: Set up JDK 17
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v3
       with:
-        java-version: 17
-        distribution: 'zulu' # Alternative distribution options are available.
+        distribution: 'zulu'
+        java-version: '17'
 
-    # Step 3: Configure JFrog CLI (Authenticate with API key)
-    - name: JFrog CLI Configuration
+    # Step 3: Use the existing Maven settings.xml
+    - name: Configure Maven
       run: |
-        jf config add --url https://trial35x8wp.jfrog.io/artifactory --user ${{ secrets.JFROG_USER}} --access-token ${{ secrets.JFROG_API_KEY }}
+        mkdir -p $HOME/.m2
+        cp ./settings.xml $HOME/.m2/settings.xml
 
-    # # Step 4: Verify JFrog CLI configuration
-    # - name: Verify JFrog CLI Configuration
-    #   run: |
-    #     jf config show
-    #     jf rt ping
+    # Step 4: Build the project
+    - name: Build with Maven
+      run: mvn clean install
 
-    - name: Build project with Maven
+    # Step 5: Run a security scan on the JAR file
+    - name: JFrog Xray Security Scan
       run: |
-        mvn clean install -DskipTests
+        jf config add my-artifactory --url https://trial35x8wp.jfrog.io/artifactory --user "${{ secrets.JFROG_USER }}" --access-token "${{ secrets.JFROG_APIKEY }}" --interactive=false
+        jf scan --licenses --format=json --output=xray_scan_results.json target/*.jar
 
-    - name: Find the generated JAR file
-      id: find_jar
-      run: |
-        JAR_FILE=$(find target -name "*.jar" | head -n 1)  # Adjust the path if your JAR file is elsewhere
-        echo "JAR_FILE=$JAR_FILE" >> $GITHUB_ENV  # Set the JAR file path as an environment variable
+    # Step 6: Upload scan results as an artifact
+    - name: Upload Xray Scan Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: xray-scan-results
+        path: xray_scan_results.json
 
-    - name: Configure Artifactory Server
-      run: |
-        jf config add my-artifactory \
-          --url https://trial35x8wp.jfrog.io/artifactory \
-          --user ${{ secrets.JFROG_USER }} \
-          --access-token ${{ secrets.JFROG_API_KEY }}
-          
-    - name: Configure JFrog CLI
-      run: |
-        jf mvn-config --server-id-resolve=my-artifactory --server-id-deploy=my-artifactory \
-        --repo-resolve-releases=libs-release --repo-resolve-snapshots=libs-snapshot \
-        --repo-deploy-releases=libs-release-local --repo-deploy-snapshots=libs-snapshot-local  
-    
-    - name: Scan Maven build artifacts with JFrog Xray
-      run: |
-        # jf mvn clean install --build-name=github-actions-build --build-number=${{ github.run_number }}
-        jf scan --build=github-actions-build/${{ github.run_number }} --fail build --watch --output json
-        
-    # Step 5: Run JFrog Xray Scan
-    # - name: Run JFrog Xray Scan
-    #   id: xray_scan
-    #   run: |
-    #     jf xr scan --licenses --format=json --min-severity=critical **/*.jar **/*.pom **/*.json **/*.yml > xray_scan_results.json
-    #   continue-on-error: false
+    # Step 7: Post scan results as a comment on the PR
+    - name: Comment on PR with Scan Results
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const resultsPath = 'xray_scan_results.json';
+          if (!fs.existsSync(resultsPath)) {
+            github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              body: `### JFrog Xray Scan Results\n❌ **Scan results file not found!**`,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            return;
+          }
 
-    # Step 6: Upload scan results to PR as a comment
-    - name: Upload Xray scan results to PR
-      if: success() || failure()
-      run: |
-        # Get the PR number
-        PR_NUMBER=$(jq --raw-output .pull_request.number $GITHUB_EVENT_PATH)
-        
-        # Get the scan results and format them
-        SCAN_RESULTS=$(cat xray_scan_results.json)
-        
-        # Prepare the comment body with scan results
-        COMMENT_BODY="### JFrog Xray Security Scan Results\n\n**Scan Results**:\n\`\`\`json\n$SCAN_RESULTS\n\`\`\`"
-        
-        # Create the comment on the PR using GitHub API
-        curl -X POST \
-          -H "Authorization: Bearer ${{ secrets.GITHUB1_TOKEN }}" \
-          -H "Content-Type: application/json" \
-          -d "{\"body\": \"$COMMENT_BODY\"}" \
-          "https://api.github.com/repos/${{ github.repository }}/issues/$PR_NUMBER/comments"
+          const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+          const vulnerabilities = results.vulnerabilities || [];
+          const criticalVulns = vulnerabilities.filter(v => v.severity === 'Critical');
+
+          let comment = `### 🛡️ JFrog Xray Scan Results\n`;
+          comment += `**Total vulnerabilities:** ${vulnerabilities.length}\n`;
+          comment += `**Critical vulnerabilities:** ${criticalVulns.length}\n`;
+
+          if (criticalVulns.length > 0) {
+            comment += `#### 🚨 Critical Issues:\n`;
+            criticalVulns.forEach(v => {
+              comment += `- **${v.component}**: ${v.summary}\n`;
+            });
+          } else {
+            comment += `No critical vulnerabilities found 🎉\n`;
+          }
+
+          github.rest.issues.createComment({
+            issue_number: context.payload.pull_request.number,
+            body: comment,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+
