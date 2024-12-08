@@ -38,6 +38,9 @@ jobs:
         curl -fL https://getcli.jfrog.io | sh
         chmod +x jfrog
         sudo mv jfrog /usr/local/bin/jf
+        
+    - name: Install Xray Plugin (if required)
+      run: jf plugin install xray
       
     # Step 5: Run a security scan on the JAR file
     - name: JFrog Xray Security Scan
