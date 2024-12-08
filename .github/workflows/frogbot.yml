@@ -1,10 +1,11 @@
 name: "Frogbot Scan Pull Request"
+
 on:
-  pull_request_target:
-    types: [ opened, synchronize ]
-permissions:
-  pull-requests: write
-  contents: read
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
 jobs:
   scan-pull-request:
     runs-on: ubuntu-latest
