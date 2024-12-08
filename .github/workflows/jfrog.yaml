@@ -43,7 +43,7 @@ jobs:
     - name: JFrog Xray Security Scan
       run: |
         jf config add my-artifactory --url https://trial35x8wp.jfrog.io/artifactory --user "${{ secrets.JFROG_USER }}" --access-token "${{ secrets.JFROG_APIKEY }}" --interactive=false
-        jf scan --licenses --format=json --output=xray_scan_results.json target/*.jar
+        jf xray scan --licenses --format=json --output=xray_scan_results.json target/*.jar
 
     # Step 6: Upload scan results as an artifact
     - name: Upload Xray Scan Results
