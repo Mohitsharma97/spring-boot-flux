@@ -21,7 +21,7 @@ jobs:
           JF_ACCESS_TOKEN: ${{ secrets.JFROG_API_KEY }}
           
           # [Mandatory] GitHub token
-          JF_GIT_TOKEN: ${{ secrets.GITHUB1_TOKEN }}
+          JF_GIT_TOKEN: ${{ secrets.GITHUB2_TOKEN }}
           
           # Optional: Skip environment approval
           JF_SKIP_APPROVAL: "true"  # Skip approval of environment and automatically scan
