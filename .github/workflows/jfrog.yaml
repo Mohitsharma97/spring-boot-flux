@@ -39,15 +39,23 @@ jobs:
         chmod +x jfrog
         sudo mv jfrog /usr/local/bin/jf
         
-    - name: Install Xray Plugin (if required)
-      run: jf plugin install xray
-      
-    # Step 5: Run a security scan on the JAR file
-    - name: JFrog Xray Security Scan
+    
+    - name: JFrog Config
       run: |
         jf config add my-artifactory --url https://trial35x8wp.jfrog.io/artifactory --user "${{ secrets.JFROG_USER }}" --access-token "${{ secrets.JFROG_APIKEY }}" --interactive=false
-        jf xray scan --licenses --format=json --output=xray_scan_results.json target/*.jar
 
+    - name: Run Xray Scan using API
+      run: |
+        curl -u "${{ secrets.JFROG_USER }}:${{ secrets.JFROG_APIKEY }}" \
+          -X POST \
+          -H "Content-Type: application/json" \
+          -d '{
+                "target": "target/*.jar",
+                "scan_mode": "full",
+                "scan_type": "licenses"
+              }' \
+          https://trial35x8wp.jfrog.io/artifactory/api/xray/scan
+          
     # Step 6: Upload scan results as an artifact
     - name: Upload Xray Scan Results
       uses: actions/upload-artifact@v3
