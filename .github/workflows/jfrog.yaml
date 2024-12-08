@@ -1,99 +1,99 @@
-name: Maven Build and Security Scan on PR
+# name: Maven Build and Security Scan on PR
 
-on:
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
+# on:
+#   pull_request:
+#     types:
+#       - opened
+#       - synchronize
+#       - reopened
 
-jobs:
-  build-and-scan:
-    runs-on: ubuntu-latest
+# jobs:
+#   build-and-scan:
+#     runs-on: ubuntu-latest
 
-    steps:
-    # Step 1: Checkout the code
-    - name: Checkout Code
-      uses: actions/checkout@v3
+#     steps:
+#     # Step 1: Checkout the code
+#     - name: Checkout Code
+#       uses: actions/checkout@v3
 
-    # Step 2: Set up Java
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'zulu'
-        java-version: '17'
+#     # Step 2: Set up Java
+#     - name: Set up JDK 17
+#       uses: actions/setup-java@v3
+#       with:
+#         distribution: 'zulu'
+#         java-version: '17'
 
-    # Step 3: Use the existing Maven settings.xml
-    - name: Configure Maven
-      run: |
-        mkdir -p $HOME/.m2
-        cp ./settings.xml $HOME/.m2/settings.xml
+#     # Step 3: Use the existing Maven settings.xml
+#     - name: Configure Maven
+#       run: |
+#         mkdir -p $HOME/.m2
+#         cp ./settings.xml $HOME/.m2/settings.xml
 
-    # Step 4: Build the project
-    - name: Build with Maven
-      run: mvn clean install
+#     # Step 4: Build the project
+#     - name: Build with Maven
+#       run: mvn clean install
       
-    - name: Install JFrog CLI
-      run: |
-        curl -fL https://getcli.jfrog.io | sh
-        chmod +x jfrog
-        sudo mv jfrog /usr/local/bin/jf
+#     - name: Install JFrog CLI
+#       run: |
+#         curl -fL https://getcli.jfrog.io | sh
+#         chmod +x jfrog
+#         sudo mv jfrog /usr/local/bin/jf
         
     
-    - name: JFrog Config
-      run: |
-        jf config add my-artifactory --url https://trial35x8wp.jfrog.io/artifactory --user "${{ secrets.JFROG_USER }}" --access-token "${{ secrets.JFROG_API_KEY }}" --interactive=false
+#     - name: JFrog Config
+#       run: |
+#         jf config add my-artifactory --url https://trial35x8wp.jfrog.io/artifactory --user "${{ secrets.JFROG_USER }}" --access-token "${{ secrets.JFROG_API_KEY }}" --interactive=false
 
-    # Step 7: Run JFrog Audit (for scanning dependencies)
-    - name: Run JFrog Audit
-      run: |
-        jf audit --build=github-actions-build/${{ github.run_number }} --fail build --output json > jf_audit_results.json
+#     # Step 7: Run JFrog Audit (for scanning dependencies)
+#     - name: Run JFrog Audit
+#       run: |
+#         jf audit --build=github-actions-build/${{ github.run_number }} --fail build --output json > jf_audit_results.json
 
-    # Step 8: Upload audit results as an artifact
-    - name: Upload JFrog Audit Results
-      uses: actions/upload-artifact@v3
-      with:
-        name: jf-audit-results
-        path: jf_audit_results.json
+#     # Step 8: Upload audit results as an artifact
+#     - name: Upload JFrog Audit Results
+#       uses: actions/upload-artifact@v3
+#       with:
+#         name: jf-audit-results
+#         path: jf_audit_results.json
 
-    # Step 9: Post scan results as a comment on the PR
-    - name: Comment on PR with Audit Results
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const fs = require('fs');
-          const resultsPath = 'jf_audit_results.json';
-          if (!fs.existsSync(resultsPath)) {
-            github.rest.issues.createComment({
-              issue_number: context.payload.pull_request.number,
-              body: `### JFrog Audit Results\n❌ **Audit results file not found!**`,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
-            return;
-          }
+#     # Step 9: Post scan results as a comment on the PR
+#     - name: Comment on PR with Audit Results
+#       uses: actions/github-script@v6
+#       with:
+#         script: |
+#           const fs = require('fs');
+#           const resultsPath = 'jf_audit_results.json';
+#           if (!fs.existsSync(resultsPath)) {
+#             github.rest.issues.createComment({
+#               issue_number: context.payload.pull_request.number,
+#               body: `### JFrog Audit Results\n❌ **Audit results file not found!**`,
+#               owner: context.repo.owner,
+#               repo: context.repo.repo,
+#             });
+#             return;
+#           }
 
-          const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
-          const vulnerabilities = results.vulnerabilities || [];
-          const criticalVulns = vulnerabilities.filter(v => v.severity === 'Critical');
+#           const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+#           const vulnerabilities = results.vulnerabilities || [];
+#           const criticalVulns = vulnerabilities.filter(v => v.severity === 'Critical');
 
-          let comment = `### 🛡️ JFrog Audit Scan Results\n`;
-          comment += `**Total vulnerabilities:** ${vulnerabilities.length}\n`;
-          comment += `**Critical vulnerabilities:** ${criticalVulns.length}\n`;
+#           let comment = `### 🛡️ JFrog Audit Scan Results\n`;
+#           comment += `**Total vulnerabilities:** ${vulnerabilities.length}\n`;
+#           comment += `**Critical vulnerabilities:** ${criticalVulns.length}\n`;
 
-          if (criticalVulns.length > 0) {
-            comment += `#### 🚨 Critical Issues:\n`;
-            criticalVulns.forEach(v => {
-              comment += `- **${v.component}**: ${v.summary}\n`;
-            });
-          } else {
-            comment += `No critical vulnerabilities found 🎉\n`;
-          }
+#           if (criticalVulns.length > 0) {
+#             comment += `#### 🚨 Critical Issues:\n`;
+#             criticalVulns.forEach(v => {
+#               comment += `- **${v.component}**: ${v.summary}\n`;
+#             });
+#           } else {
+#             comment += `No critical vulnerabilities found 🎉\n`;
+#           }
 
-          github.rest.issues.createComment({
-            issue_number: context.payload.pull_request.number,
-            body: comment,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-          });
+#           github.rest.issues.createComment({
+#             issue_number: context.payload.pull_request.number,
+#             body: comment,
+#             owner: context.repo.owner,
+#             repo: context.repo.repo,
+#           });
 
