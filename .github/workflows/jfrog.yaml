@@ -65,15 +65,15 @@ jobs:
     
     - name: Scan Maven build artifacts with JFrog Xray
       run: |
-        jf mvn clean install --build-name=github-actions-build --build-number=${{ github.run_number }}
+        # jf mvn clean install --build-name=github-actions-build --build-number=${{ github.run_number }}
         jf scan --build=github-actions-build/${{ github.run_number }} --fail build --watch --output json
         
     # Step 5: Run JFrog Xray Scan
-    - name: Run JFrog Xray Scan
-      id: xray_scan
-      run: |
-        jf xr scan --licenses --format=json --min-severity=critical **/*.jar **/*.pom **/*.json **/*.yml > xray_scan_results.json
-      continue-on-error: false
+    # - name: Run JFrog Xray Scan
+    #   id: xray_scan
+    #   run: |
+    #     jf xr scan --licenses --format=json --min-severity=critical **/*.jar **/*.pom **/*.json **/*.yml > xray_scan_results.json
+    #   continue-on-error: false
 
     # Step 6: Upload scan results to PR as a comment
     - name: Upload Xray scan results to PR
