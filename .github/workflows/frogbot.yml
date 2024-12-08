@@ -28,3 +28,6 @@ jobs:
           
           # Optional: Skip environment approval
           JF_SKIP_APPROVAL: "true"  # Skip approval of environment and automatically scan
+        with:
+          scan_mode: "full"
+          scan_type: "security"
