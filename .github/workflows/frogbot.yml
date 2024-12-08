@@ -1,0 +1,34 @@
+name: "Frogbot Scan Pull Request"
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+permissions:
+  pull-requests: write
+  contents: read
+jobs:
+  scan-pull-request:
+    runs-on: ubuntu-latest
+    # A pull request needs to be approved before Frogbot scans it.
+    environment: frogbot
+    steps:
+      - uses: jfrog/frogbot@v2
+        env:
+          JFROG_CLI_LOG_LEVEL: "DEBUG"
+          # [Mandatory] JFrog platform URL
+          JF_URL: ${{ secrets.FROGBOT_URL }}
+          
+          # [Mandatory] JFrog access token with 'read' permissions on Xray service
+          JF_ACCESS_TOKEN: ${{ secrets.JFROG_API_KEY }}
+          
+          # [Mandatory] GitHub token
+          JF_GIT_TOKEN: ${{ secrets.GITHUB2_TOKEN }}
+          
+          # Optional: Skip environment approval
+          JF_SKIP_APPROVAL: "true"  # Skip approval of environment and automatically scan
+        with:
+          scan_mode: "full"
+          scan_type: "security"
+          config: frogbot-config.yml
