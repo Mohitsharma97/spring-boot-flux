@@ -31,3 +31,4 @@ jobs:
         with:
           scan_mode: "full"
           scan_type: "security"
+          config: frogbot-config.yml
