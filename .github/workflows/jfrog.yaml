@@ -44,40 +44,29 @@ jobs:
       run: |
         jf config add my-artifactory --url https://trial35x8wp.jfrog.io/artifactory --user "${{ secrets.JFROG_USER }}" --access-token "${{ secrets.JFROG_API_KEY }}" --interactive=false
 
-    # - name: Run Xray Scan using API
-    #   run: |
-    #     curl -u "${{ secrets.JFROG_USER }}:${{ secrets.JFROG_API_KEY }}" \
-    #       -X POST \
-    #       -H "Content-Type: application/json" \
-    #       -d '{
-    #             "target": "target/*.jar",
-    #             "scan_mode": "full",
-    #             "scan_type": "licenses"
-    #           }' \
-    #       https://trial35x8wp.jfrog.io/artifactory/api/xray/scan
-    - name: Trigger Build Scan
-      id: build_scan
+    # Step 7: Run JFrog Audit (for scanning dependencies)
+    - name: Run JFrog Audit
       run: |
-        jf scan --build=github-actions-build/${{ github.run_number }} --fail build --watch --output json > xray_scan_results.json
+        jf audit --build=github-actions-build/${{ github.run_number }} --fail build --output json > jf_audit_results.json
 
-    # Step 6: Upload scan results as an artifact
-    - name: Upload Xray Scan Results
+    # Step 8: Upload audit results as an artifact
+    - name: Upload JFrog Audit Results
       uses: actions/upload-artifact@v3
       with:
-        name: xray-scan-results
-        path: xray_scan_results.json
+        name: jf-audit-results
+        path: jf_audit_results.json
 
-    # Step 7: Post scan results as a comment on the PR
-    - name: Comment on PR with Scan Results
+    # Step 9: Post scan results as a comment on the PR
+    - name: Comment on PR with Audit Results
       uses: actions/github-script@v6
       with:
         script: |
           const fs = require('fs');
-          const resultsPath = 'xray_scan_results.json';
+          const resultsPath = 'jf_audit_results.json';
           if (!fs.existsSync(resultsPath)) {
             github.rest.issues.createComment({
               issue_number: context.payload.pull_request.number,
-              body: `### JFrog Xray Scan Results\n❌ **Scan results file not found!**`,
+              body: `### JFrog Audit Results\n❌ **Audit results file not found!**`,
               owner: context.repo.owner,
               repo: context.repo.repo,
             });
@@ -88,7 +77,7 @@ jobs:
           const vulnerabilities = results.vulnerabilities || [];
           const criticalVulns = vulnerabilities.filter(v => v.severity === 'Critical');
 
-          let comment = `### 🛡️ JFrog Xray Scan Results\n`;
+          let comment = `### 🛡️ JFrog Audit Scan Results\n`;
           comment += `**Total vulnerabilities:** ${vulnerabilities.length}\n`;
           comment += `**Critical vulnerabilities:** ${criticalVulns.length}\n`;
 
